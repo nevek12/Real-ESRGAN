@@ -1,12 +1,12 @@
 import streamlit as st
-from PIL import Image
-from io import BytesIO
 # Применяем патч перед импортом других модулей
 try:
     import patch_degradations
 except ImportError:
     print("⚠️ Degradations patch not applied")
-
+from PIL import Image
+from io import BytesIO
+from proverka import process_image_with_esrgan
 import os
 os.environ['OPENCV_IO_ENABLE_OPENEXR'] = '1'
 os.environ['OPENCV_VIDEOIO_DEBUG'] = '0'
