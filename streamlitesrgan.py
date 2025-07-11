@@ -1,9 +1,4 @@
 import streamlit as st
-# Применяем патч перед импортом других модулей
-try:
-    import patch_degradations
-except ImportError:
-    print("⚠️ Degradations patch not applied")
 from PIL import Image
 from io import BytesIO
 from proverka import process_image_with_esrgan
