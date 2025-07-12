@@ -1,16 +1,21 @@
 import streamlit as st
 from PIL import Image
 from io import BytesIO
-from proverka import process_image_with_esrgan
+from get_image_4x import process_image_with_esrgan
 import os
-os.environ['OPENCV_IO_ENABLE_OPENEXR'] = '1'
-os.environ['OPENCV_VIDEOIO_DEBUG'] = '0'
+
 # Настройка страницы
 st.set_page_config(
     page_title="Улучшение качества фото в 4 раза",
     page_icon="🖼️",
     layout="centered"
 )
+
+# Инициализация состояния сессии
+if 'processed_image' not in st.session_state:
+    st.session_state.processed_image = None
+if 'original_filename' not in st.session_state:
+    st.session_state.original_filename = None
 
 # Заголовок и описание
 st.title("🖼️ Улучшение качества фотографий в 4 раза")
@@ -26,8 +31,14 @@ uploaded_file = st.file_uploader(
     type=["jpg", "jpeg", "png", "webp"],
     accept_multiple_files=False
 )
+
+# Сброс состояния при загрузке нового файла
 if uploaded_file is not None:
-    # Отображение оригинального изображения
+    if st.session_state.original_filename != uploaded_file.name:
+        st.session_state.processed_image = None
+        st.session_state.original_filename = uploaded_file.name
+    st.write("Файл успешно загружен")
+
     try:
         original_image = Image.open(uploaded_file)
         st.subheader("Ваше оригинальное изображение:")
@@ -35,38 +46,72 @@ if uploaded_file is not None:
 
         # Кнопка для запуска обработки
         if st.button("Улучшить качество (4x)", type="primary"):
+            with st.spinner("обработка изображения, среднее время ожидания ~5 минут..."):
+                enhanced_image = Image.fromarray(process_image_with_esrgan(original_image))
+                st.session_state.processed_image = enhanced_image
 
+            # Отображение результата
+            st.subheader("Результат улучшения:")
+            st.image(st.session_state.processed_image, use_container_width=True)
+            st.success(
+                f"Размер улучшенного изображения: {st.session_state.processed_image.size[0]}x{st.session_state.processed_image.size[1]}")
 
-                # Запускаем реальную обработку
-                with st.spinner("Запуск REAL-ESRGAN..."):
-                    enhanced_image = Image.fromarray(process_image_with_esrgan(original_image))
+        # Отображение кнопок скачивания, если есть обработанное изображение
+        if st.session_state.processed_image is not None:
+            base_name = os.path.splitext(uploaded_file.name)[0]
 
+            st.subheader("Скачать в формате:")
+            col1, col2, col3 = st.columns(3)
 
-
-
-                # Отображение результата
-                st.subheader("Результат улучшения:")
-                st.image(enhanced_image, use_container_width=True)
-
-                # Подготовка изображения для скачивания
-                buffered = BytesIO()
-                enhanced_image.save(buffered, format="PNG")
-
-                # Кнопка скачивания
+            # PNG
+            with col1:
+                png_buffer = BytesIO()
+                st.session_state.processed_image.save(png_buffer, format="PNG")
                 st.download_button(
-                    label="Скачать улучшенное изображение",
-                    data=buffered.getvalue(),
-                    file_name=f"enhanced_{uploaded_file.name}",
+                    label="PNG",
+                    data=png_buffer.getvalue(),
+                    file_name=f"{base_name}_enhanced.png",
                     mime="image/png",
-                    type="primary"
+                    key="png-download"
                 )
 
-                st.success(f"Размер улучшенного изображения: {enhanced_image.size[0]}x{enhanced_image.size[1]}")
+            # JPEG
+            with col2:
+                jpeg_buffer = BytesIO()
+                # Конвертируем в RGB, если изображение с альфа-каналом
+                if st.session_state.processed_image.mode in ("RGBA", "P"):
+                    rgb_image = st.session_state.processed_image.convert("RGB")
+                    rgb_image.save(jpeg_buffer, format="JPEG", quality=95)
+                else:
+                    st.session_state.processed_image.save(jpeg_buffer, format="JPEG", quality=95)
 
+                st.download_button(
+                    label="JPEG",
+                    data=jpeg_buffer.getvalue(),
+                    file_name=f"{base_name}_enhanced.jpg",
+                    mime="image/jpeg",
+                    key="jpeg-download"
+                )
+
+            # WEBP
+            with col3:
+                webp_buffer = BytesIO()
+                st.session_state.processed_image.save(webp_buffer, format="WEBP", quality=90)
+
+                st.download_button(
+                    label="WEBP",
+                    data=webp_buffer.getvalue(),
+                    file_name=f"{base_name}_enhanced.webp",
+                    mime="image/webp",
+                    key="webp-download"
+                )
 
     except Exception as e:
         st.error(f"Ошибка обработки изображения: {str(e)}")
+        st.exception(e)
 else:
+    st.session_state.processed_image = None
+    st.session_state.original_filename = None
     st.info("👆 Пожалуйста, загрузите изображение для улучшения качества")
 
 # Информация в футере
@@ -74,12 +119,7 @@ st.write("---")
 st.markdown("""
 ### Процесс обработки:
 1. Ваше изображение передается напрямую в обработчик
-2. Запускается команда:
-   ```bash
-   python inference_realesrgan.py -n net_g_85000.pth -i [temp] -o [temp] --outscale 4
-Результат возвращается из временной памяти
-
-Обработанное изображение отображается для скачивания
-
-Технология: REAL-ESRGAN - современная нейросеть для улучшения изображений
+2. Запускается обработка вашего изображения дообученой на датасете Flickr2K нейросети Real_ESRGAN
+3. Результат возвращается из временной памяти
+4. Обработанное изображение отображается для скачивания в форматах jpg png webp
 """)
