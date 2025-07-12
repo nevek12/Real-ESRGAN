@@ -11,7 +11,7 @@ max_psnr = 0
 max_ssim = 0
 best_model_psnr = 0
 best_model_ssim = 0
-lsst = ['100000', 'latest']
+lsst = list(range(5000, 100000+1)) + ['latest']
 for i in range(len(lsst)):
     print(os.system(f'powershell python inference_realesrgan.py -n net_g_{lsst[i]}.pth -i datasets/Flickr2K/val/LR -o results'))
 
@@ -54,5 +54,5 @@ for i in range(len(lsst)):
 
 print(f"max psnr: {max_psnr}")
 print(f"max ssim: {max_ssim}")
-print(f"the best model: {best_model_psnr} : {best_model_ssim}")
+print(f"the best model: {lsst[best_model_psnr]} : {lsst[best_model_ssim]}")
 
