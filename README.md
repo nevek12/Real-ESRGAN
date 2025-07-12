@@ -1,41 +1,30 @@
-# Real-ESRGAN Fine-Tuned Model
+# 🚀 Fine-Tuned Real-ESRGAN Model
 
-This repository contains a fine-tuned version of the [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) network for single-image super-resolution. The model has been trained for 100,000 iterations on the Flickr2K dataset and extends the original implementation.
-
----
-
-## 📋 Table of Contents
-
-1. [Prerequisites](#prerequisites)
-2. [Installation](#installation)
-3. [Patch Guide](#patch-guide)
-4. [Quick Inference](#quick-inference)
-   - [Command-Line Inference](#command-line-inference)
-   - [Inference Example](#inference-example)
-5. [Training](#training)
-6. [License](#license)
+This repository provides a fine-tuned version of the Real-ESRGAN model for high-quality image super-resolution tasks.
 
 ---
 
-## Prerequisites
+## 📚 Table of Contents
 
-- Python 3.8 or higher
-- `pip` package manager
-- Git
+- [Quick Start](#quick-start)
+- [Patching](#patching)
+- [⚡ Quick Inference](#-quick-inference)
+  - [Python Script](#python-script)
+- [🧠 Model Training](#-model-training)
+- [📈 Validation](#-validation)
+- [📦 Used in Application](#-used-in-application)
 
 ---
 
-## Installation
+## 🔧 Quick Start
 
 1. **Clone the repository**
-
    ```bash
-   git clone https://github.com/yourusername/Real-ESRGAN-finetune.git
-   cd Real-ESRGAN-finetune
+   git clone https://github.com/xinntao/Real-ESRGAN.git
+   cd Real-ESRGAN
    ```
 
 2. **Install dependencies**
-
    ```bash
    pip install -r requirements.txt
    python setup.py develop
@@ -43,77 +32,107 @@ This repository contains a fine-tuned version of the [Real-ESRGAN](https://githu
 
 ---
 
-## Patch Guide
+## 🩹 Patching
 
-To ensure compatibility with the latest `torchvision`, update the import path in `basicsr/data/degradations.py`:
+Update the import in `degradations.py` due to `torchvision` changes:
 
-```diff
-- from torchvision.transforms.functional_tensor import rgb_to_grayscale
-+ from torchvision.transforms.functional import rgb_to_grayscale
+File to edit:
+```
+venv/Lib/site-packages/basicsr/data/degradations.py
+```
+
+Replace:
+```python
+from torchvision.transforms.functional_tensor import rgb_to_grayscale
+```
+
+With:
+```python
+from torchvision.transforms.functional import rgb_to_grayscale
 ```
 
 ---
 
-## Quick Inference
+## ⚡ Quick Inference
 
-You can run inference using the provided Python script:
+### 🐍 Python Script
 
-### Command-Line Interface
+You can use the X4 model for arbitrary output sizes with the `--outscale` argument.
+
+**Usage Example:**
+```bash
+python inference_realesrgan.py -n RealESRGAN_x4plus -i infile --outscale 3.5 --face_enhance
+```
+
+**Help:**
+```bash
+  -h                   Show help
+  -i, --input          Input image or folder (default: inputs)
+  -o, --output         Output folder (default: results)
+  -n, --model_name     Model name (default: RealESRGAN_x4plus)
+  -s, --outscale       Final upsampling scale (default: 4)
+  --suffix             Suffix of restored image (default: out)
+  -t, --tile           Tile size (0 = no tiling)
+  --face_enhance       Use GFPGAN to enhance faces (default: False)
+  --fp32               Use fp32 precision (default: fp16)
+  --ext                Image extension: auto | jpg | png (default: auto)
+```
+
+### Download Pre-trained Weights
 
 ```bash
-python inference_realesrgan.py \
-  -n RealESRGAN_x4plus \
-  -i <input_path> \
-  -o <output_path> \
-  [--outscale <scale>] \
-  [--face_enhance] \
-  [--fp32] \
-  [--tile <size>] \
-  [--suffix <suffix>] \
-  [--ext <auto|jpg|png>]
+wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights
 ```
 
-**Options**:
-
-- `-i`, `--input`       : Input image or directory (default: `inputs`).
-- `-o`, `--output`      : Output directory (default: `results`).
-- `-n`, `--model_name`  : Model name (default: `RealESRGAN_x4plus`).
-- `-s`, `--outscale`    : Final upsampling scale (default: `4`).
-- `--face_enhance`      : Enable GFPGAN face enhancement.
-- `--fp32`              : Use full (fp32) precision instead of fp16.
-- `-t`, `--tile`        : Tile size for tiled inference (0 = no tiling).
-- `--suffix`            : Suffix for output filenames (default: `out`).
-- `--ext`               : Output image format (`auto`, `jpg`, `png`).
-
-### Inference Example
-
-1. **Download pre-trained weights**:
-   ```bash
-   wget https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P weights
-   ```
-2. **Run inference**:
-   ```bash
-   python inference_realesrgan.py -n RealESRGAN_x4plus -i inputs --face_enhance
-   ```
-3. **Results** will be saved in the `results` folder.
-
----
-
-## Training
-
-Train the model or fine-tune on your own data:
+### Run Inference
 
 ```bash
-python realesrgan/train.py \
-  -opt options/finetune_realesrgan_x4plus_pairdata.yml \
-  --auto_resume
+python inference_realesrgan.py -n RealESRGAN_x4plus -i inputs --face_enhance
 ```
 
-Modify the YAML file in `options/` to adjust training parameters, dataset paths, and logging configurations.
+Output images will be saved in the `results` directory.
 
 ---
 
-## License
+## 🧠 Model Training
 
-This project is licensed under the [MIT License](LICENSE).
+The model was fine-tuned for **100,000 iterations** on the **Flickr2K** dataset.
 
+```bash
+python realesrgan/train.py -opt options/finetune_realesrgan_x4plus_pairdata.yml --auto_resume
+```
+
+The file `finetune_realesrgan_x4plus_pairdata.yml` contains the training settings.
+
+- **Generator** model: `RealESRGAN_x4plus.pth`
+- **Discriminator** model: `RealESRGAN_x4plus_netD.pth`
+
+---
+
+## 📈 Validation
+
+Validation was performed using the script:
+
+```bash
+python validation.py
+```
+
+Validation results for all checkpoints were logged in:
+
+```
+result_validation_models.txt
+```
+
+After evaluating all iterations, the best performing model was:
+
+```text
+net_g_85000.pth
+```
+
+---
+
+## 📦 Used in Application
+
+The final deployed application uses the selected model `net_g_85000.pth` for super-resolution inference.
+
+---
